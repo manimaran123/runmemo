@@ -1,0 +1,33 @@
+/* by resource 2 */
+
+
+/* css for get my photo field in the runner side */
+#edit-setfield  {
+    -moz-border-radius: 4px 4px 4px 4px;
+    background: none repeat scroll 0 0 gray;
+    border: 1px solid #CCCCCC;
+    margin-bottom: 32px;
+    margin-top: -1px;
+    padding: 0 0 10px;
+    position: relative;
+    top: 12px;
+}
+
+
+/* css for sell field in the runner side */
+#edit-sellfield  {
+    -moz-border-radius: 4px 4px 4px 4px;
+    background: none repeat scroll 0 0 gray;
+    border: 1px solid #CCCCCC;
+    margin-bottom: 32px;
+    margin-top: -1px;
+    padding: 0 0 10px;
+    position: relative;
+    top: 12px;
+}
+
+
+
+
+
+

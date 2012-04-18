@@ -1,0 +1,224 @@
+<?php
+
+/**
+ * product Node view function
+ */
+function ubercart_custom_node_view($node, $view_mode, $langcode) {
+  global $user;
+  $uid = $user->uid;
+  $node_type = $node->type;
+  if (($uid != 1) && (arg(0) == 'node') && ($node_type == 'product')) {
+     drupal_goto();
+  }
+}
+
+/**
+ * Alter the menu items
+ */
+function ubercart_custom_menu_alter(&$items) {
+  //unset($items['cart']);
+}
+
+
+/**
+ * Init function for adding the external file
+ */
+function ubercart_custom_init() {
+   
+  //for redirect the cart page
+  //when no products in the shopping cart
+  if (arg(0) == 'cart' && arg(1) == '') {
+    $no_of_cart_items = count(uc_cart_get_contents());
+    if ($no_of_cart_items == '0') {
+      drupal_set_message(t('There are no products in your shopping cart'));
+      drupal_goto();
+    }
+  }
+}
+
+
+/**  
+ * Create the hook menu for each page 
+ * by using this we can map to the related page
+ * @return
+ * return menu items
+ */
+function ubercart_custom_menu() {
+  //AJAX url
+  $items['cart_add_remove'] = array(
+    'title' => '',
+    'description' => '',
+    'page callback' => 'cart_add_remove',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK
+  );
+  
+  
+  
+    return $items;
+
+}
+
+
+
+
+/*
+ * AJAX cart add,remove function
+ */
+function cart_add_remove() {
+  
+   
+  if ($_GET['nid'] != NULL) {
+    $nid = $_GET['nid'];
+  }
+  else {
+    $nid = '';
+  }
+ 
+ 
+ global $user;
+ $uid = $user->uid;
+ 
+ 
+ if ($nid == '') {
+    $subtotal = 0;
+    foreach (uc_cart_get_contents($uid) as $item) {
+      $subtotal += $item->price * $item->qty;
+      $cart_ids[]=$item->nid ;      
+    }
+    if (!empty($cart_ids)) {
+      $cart_string_nid = implode(',', $cart_ids);
+    }
+    else {
+      $cart_string_nid = '';
+    }
+    
+    $items = 0;
+    foreach (uc_cart_get_contents($uid) as $item) {
+      $items += 1;
+    }
+    
+    echo $items . '|' . $subtotal . '|' . $cart_string_nid;
+    exit;
+ }
+ 
+ else {
+   $cart_ids = array();
+  foreach (uc_cart_get_contents($uid) as $item) {
+    $cart_ids[]=$item->nid ;
+  }
+  if (in_array($nid, $cart_ids)) {
+    uc_cart_remove_item($nid, $cid = $uid, $data = array('module' => 'uc_product'));
+    echo 0 ;
+    exit;
+   }
+  else {
+    uc_cart_add_item($nid, $qty = 1, $data = NULL, $cid = $uid);
+    echo 1;
+    exit;
+  }
+ }
+  
+}
+
+
+
+
+/**
+ * Form alter function
+ * by using this form_alter function we can alter the form without editing core module
+ * @param $form,$form_state,$form_id
+ * $form give the form value
+ * $form_id is the form id
+ */
+function ubercart_custom_form_alter(&$form, $form_state, $form_id) {
+
+  //alter the product node edit form
+  if ($form['#form_id'] == 'product_node_form') {
+    $nid = $form['nid']['#value'];
+    $node_order_status = new ubercart_custom_model();
+    $status_of_image = $node_order_status->image_order_status($nid);
+    //Check the product already sold or not
+    //if sold means disable the selling price in the product edit forms
+    if ($status_of_image != 0) {
+      $form['base']['prices']['sell_price']['#disabled'] = 'TRUE';
+    }
+    $form['#validate'][] = 'product_pricing_validation';
+
+
+  }
+
+  //alter the checkout form
+  if ($form['#form_id'] == 'uc_cart_checkout_form') {
+
+    $form['panes']['payment']['payment_method']['#options']['paypal_wps'] = 'Paypal Standard';
+    $form['panes']['payment']['details']['#markup'] = '';
+    
+    
+    $form['panes']['billing']['#type'] = '';
+    $form['panes']['customer']['#type'] = '';
+    $form['panes']['cart']['#type'] = '';
+
+    $form['panes']['customer']['email_text']['#prefix'] =  '<span class="checkout-email">';
+    $form['panes']['customer']['email_text']['#suffix'] =  '</span>';
+
+
+    //$form['panes']['payment']['payment_method']['#type'] = 'hidden';
+    $form['panes']['payment']['details']['cc_number']['#required'] = TRUE; 
+    $form['panes']['payment']['details']['cc_cvv']['#required'] = TRUE; 
+    
+    
+    $form['panes']['payment']['details']['cc_policy']['#markup'] = '';
+    $form['panes']['payment']['details']['cc_number']['#size'] = '32';
+    $form['panes']['payment']['details']['cc_exp_month']['#title'] = 'Expiration Month';
+    $form['actions']['cancel'] = '';
+    $form['actions']['continue']['#value'] = '';
+
+  }
+    
+  //alter for review order page
+  if ($form['#form_id'] == 'uc_cart_checkout_review_form') {
+    $form['actions']['back']= '';
+    $form['actions']['back']['#markup'] = l("", "cart/checkout", array(
+                                          'attributes' => array(
+                                            'id' => 'edit-back',
+
+                                          )));
+
+
+    $form['actions']['submit']['#value'] = t('');
+
+  }
+
+}
+  
+//validate the sell price when edit the product node
+function product_pricing_validation($form, &$form_state) {
+  
+  $img_cost = $form['base']['prices']['sell_price']['#value'];
+  
+  if (!(($img_cost >= 2) && ($img_cost <= 100))) {
+   form_set_error('field_sell_price', t('Enter sell price between 2 to 100 only'));
+  }
+  
+}
+
+/**
+ * Add to cart submit button in the search result page
+ * @param type $form
+ * @param type $form_state
+ * @return string 
+ */
+
+function search_result_cart($form, &$form_state) {
+  $form = array();
+  
+  $form['cart_hidden']   = array('#type' => 'textfield', '#value' => '', '#id' => 'cart_hidden', '#prefix' => '<div style="display:none;">', '#suffix' => '</div>');
+  $form['selected_product'] = array('#type' => 'textfield', '#title' => '', '#id' => 'selected_cart_products', '#prefix' => '<div style="display:none;">', '#suffix' => '</div>');
+  $url = url('cart/checkout');
+  $form['cart_summary'] = array('#markup' => t("<div class='cart_summ'><div class='summary_item_cost'><span class='cart-block-icon-full' title='View your shopping cart.'></span><span class='shop_cart_title'>Shopping Cart</span></div><div><span class='summary_selected_photos'><span class='placeholder'></span> Items</span><span class='summary_cost'>Total:&nbsp £<span class='placeholder'></span></span></div><div class='proceed_to_cart'><a href=$url></a></div></div>"));
+  $form['prev_img_det'] = array('#markup' => t('<div class="cost_auth_det"><span id="photo_cost">Price:<label class="photo_cost">&euro  2870 </label></span><br/><span id="photo_author">Photo by:<label class="photo_cost">James Whyte </label></span></div>'), '#prefix' => '<div class="prev_img_details">', );
+  $form['add_to_cart'] = array('#type' => 'submit', '#value' => '', '#id' => 'add_to_cart', '#suffix' => '<div id="prev_img"><img  id="preview_image"  src="/sites/default/files/logo.png"/></div></div>', );
+ 
+  return $form;
+}

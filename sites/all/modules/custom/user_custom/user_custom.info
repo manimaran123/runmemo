@@ -1,0 +1,6 @@
+name = user_custom
+description = A block module that is used to alter form in the core module
+core = 7.x
+
+files[] = user_custom.inc
+

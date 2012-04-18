@@ -1,0 +1,37 @@
+<?php
+
+/**
+ * @file
+ * Test case for test the custom form 
+ */
+
+
+/**
+ * Initialise Test case for photo_search module
+ * set up What are the module related to testing particular module
+ */
+class photo_searchWebTestCase extends DrupalWebTestCase {
+  function setUp() {
+    parent::setUp(array('photo_search', 'amazon_s3'));
+  }
+}
+/**
+ * Set the test file information here
+ * @return 
+ * return information about your testing module
+ */
+class photo_searchTestCase extends photo_searchWebTestCase {
+  public static function getInfo() {
+    return array('name' => 'photo_search',
+              'description' => 'Test the photo_search photo search page',
+              'group' => 'Runmemo');
+  }
+
+/**
+ * Write test code here
+ */
+  function test_photo_search() {
+    $this->drupalGet('photo_search');
+    $this->assertText('My Number');
+  }
+}

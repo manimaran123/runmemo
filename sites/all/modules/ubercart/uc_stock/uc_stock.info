@@ -1,0 +1,17 @@
+name = Stock
+description = Manages stock levels of your products.
+dependencies[] = uc_product
+package = Ubercart - extra
+core = 7.x
+
+; Views handlers
+files[] = views/uc_stock_handler_filter_below_threshold.inc
+
+configure = admin/store/settings/stock
+
+; Information added by drupal.org packaging script on 2012-01-23
+version = "7.x-3.0-rc4"
+core = "7.x"
+project = "ubercart"
+datestamp = "1327337150"
+

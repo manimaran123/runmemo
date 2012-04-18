@@ -1,0 +1,73 @@
+<?php
+
+/**
+ * Form alter function
+ * by using this form_alter function we can alter the form without editing core module
+ * @param $form,$form_state,$form_id
+ * $form give the form value
+ * $form_id is the form id
+ */
+function user_custom_form_alter(&$form, $form_state, $form_id) {
+   if ($form['#form_id'] == 'user_login') {
+      
+      $form['new_pwd'] = array('#markup' => l('Forgot password?', 'user/password', array('attributes' => array('id' => 'forgot_pwd'))));
+      $form['actions']['submit']['#value'] = 'Login';
+      $form['#validate'][] = 'cookie_check_validate';
+    }
+    //registration page
+    if ($form['#form_id']=='user_register_form') {
+
+      $base_path=base_path() . 'sites/default/help_icon.gif';
+      $form['photo_paypal_icon'] = array('#markup' => "<p><span title='Your Paypal account ID' id='paypal_icon' style='float:right;padding-right:102px;padding-top:18px;color:red;'><img src='$base_path'></img></span></p>", '#weight' => '5');
+      //add the form submit function for insert the user role in the user table
+      $form['#submit']['']= 'user_role_insertion'; 
+
+
+    }
+    //profile edit page
+    if ($form['#form_id']=='user_profile_form') {
+      global $user;
+      $uid=$user->uid;
+      $base_path=base_path() . 'sites/default/help_icon.gif';
+      $form['photo_paypal_icon'] = array('#markup' => "<p><span title='Your Paypal account ID' id='paypal_icon' style='float:right;padding-right:102px;padding-top:18px;color:red;'><img src='$base_path'></img></span></p>", '#weight' => '5');
+      $form['field_term'] = '';
+
+    }
+}
+
+/**
+ *Function for insert the user role in the users table when submit the create account submit button
+ * @param $form
+ * $form gives form values from the user registration page
+ */
+function user_role_insertion($form, &$from_state) {
+ 
+    //call class function
+    $user_custom_object=new user_custom_model();
+    $user_role=$user_custom_object->get_role_id();
+    $role_id=$user_role->rid;
+
+    $uid=$form['#user']->uid;
+
+    //call the class function for update the user role in the user table
+    $user_custom_object->user_role_update($role_id, $uid);
+
+    //call the class function for insert the user role in the user roles table
+    $user_custom_object->user_role_id_insert($role_id, $uid);
+
+}
+
+
+/**
+ * Validate callback for user login form submission.
+ *
+ * If the cookie set previously is not present, redirect.
+ */
+function cookie_check_validate($form, &$form_state) {
+  if (!$_COOKIE) {
+    $domain = ini_get('session.cookie_domain') ? ini_get('session.cookie_domain') : $_SERVER['HTTP_HOST'];
+    form_set_error('', t('It seems your browser does not accept cookies. To log into this site, you need to accept cookies from the domain @domain.', array('@domain' => $domain)));
+  }
+}
+
+

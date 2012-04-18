@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function unified_login_menu(){
+  $items['login'] = array(
+    "title"            => "Login / Register",
+    "page callback"    => 'unified_login_page',
+    'access callback' => 'user_is_anonymous',
+  );
+  
+  return $items;
+}
+
+
+function unified_login_page() {
+  $content['signin'] = array(
+    '#type' => 'fieldset', 
+    '#title' => t('Login'), 
+    '#collapsible' => FALSE, 
+    '#collapsed' => FALSE,
+    '#id' => 'sign-in-fieldset'
+  );
+
+  $content['signin']['form'] = drupal_get_form('user_login');
+  
+  $content['register'] = array(
+    '#type' => 'fieldset', 
+    '#title' => t('Register'), 
+    '#collapsible' => FALSE, 
+    '#collapsed' => FALSE,
+    '#id' => 'register-fieldset'
+  );
+
+  $content['register']['form'] = drupal_get_form('user_register_form');
+
+  return $content;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function unified_login_menu_alter(&$items) {
+  $items['register'] = $items['user/register'];
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function unified_login_form_user_register_form_alter(&$form, $form_state, $form_id) {
+  $form['actions']['submit']['#value'] = 'Create an Account';
+}

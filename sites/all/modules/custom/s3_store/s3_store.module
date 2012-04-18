@@ -1,0 +1,68 @@
+<?php
+
+/**
+ * Implementation of hook_cron()
+ * Function for getting images from local and pushing to s3
+ */
+ 
+function s3_store_cron() {
+  $s3_store_object = new s3_store_model();
+  $photos_url = $s3_store_object->get_local_photos();
+  $s3 = amazon_s3_get_instance();
+  $bucket = variable_get('amazons3_bucket', '');
+  $acl = 'public-read-write';
+  $path=drupal_realpath('public://');
+  foreach ($photos_url as $photo_url) { 
+    $thumb_success = $orig_success = $preview_success = "";
+    $thumbnail_local_path = $path . '/styles/thumbnail/public/' . $photo_url->filename;
+    $thumb_local_path = 'public://styles/thumbnail/public/' . $photo_url->filename;
+    $thumb_desc_path = 'styles/thumbnail/s3/' . $photo_url->filename;
+    $preview_local_path = $path . '/styles/preview-with-watermark/public/' . $photo_url->filename;
+    $prev_local_path = 'public://styles/preview-with-watermark/public/' . $photo_url->filename;
+    $prev_desc_path = 'styles/preview-with-watermark/s3/' . $photo_url->filename;
+    //Pushing the files
+    $orig_file_path = $photo_url->uri;
+    if (file_exists($photo_url->uri)) {
+      $orig_success = $s3->putObjectFile($photo_url->uri, $bucket, $photo_url->filename, $acl);
+    }
+    if (file_exists($thumbnail_local_path)) {
+      $thumb_success = $s3->putObjectFile($thumb_local_path, $bucket, $thumb_desc_path, $acl);
+    }
+    if (file_exists($preview_local_path)) {
+      $preview_success = $s3->putObjectFile($prev_local_path, $bucket, $prev_desc_path, $acl);
+    }
+    if ($orig_success && $thumb_success && $preview_success) {
+      $s3_store_object->update_s3_status($photo_url->entity_id);
+      $url = str_replace("public://", "s3://", $photo_url->uri);
+
+      $s3_store_object->update_url($photo_url->fid, $url);
+      // sending message to OCR for an uploaded image
+      if (module_exists('ocr') && function_exists('invokeSendMessage')) {
+        invokeSendMessage($photo_url->entity_id,$photo_url->filename);
+      }
+      file_unmanaged_delete($orig_file_path);
+      file_unmanaged_delete($thumb_local_path);
+      file_unmanaged_delete($prev_local_path);
+    }  
+  }
+  drupal_flush_all_caches();
+}
+
+
+/**
+ * function to create signed url to download orginal image
+ */
+ function get_s3_signed_url($resource) {
+  $bucket = variable_get('amazons3_bucket', '');
+  $AWS_S3_KEY        = variable_get('aws_access_key', '');
+  $AWS_s3_secret_key = variable_get('aws_secret_key', '');
+  $expires = time()+63072000;
+  // S3 Signed URL creation
+  $string_to_sign = "GET\n\n\n{$expires}\n/" . str_replace(".s3.amazonAWS.com", "", $bucket) . "/$resource";
+  $signature = urlencode(base64_encode((hash_hmac("sha1", utf8_encode($string_to_sign), $AWS_s3_secret_key, TRUE))));
+
+  $authentication_params = "AWSAccessKeyId=" . $AWS_S3_KEY;
+  $authentication_params .= "&Expires={$expires}";
+  $authentication_params .= "&Signature={$signature}";
+  return $link = "http://s3-eu-west-1.amazonAWS.com/{$bucket}/{$resource}?{$authentication_params}";
+}

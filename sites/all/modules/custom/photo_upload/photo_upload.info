@@ -1,0 +1,5 @@
+name = photo_upload
+description = A block module that is used to photo_upload side
+core = 7.x
+files[]= photo_upload.test
+files[]= photo_upload.inc

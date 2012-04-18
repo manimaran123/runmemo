@@ -1,0 +1,229 @@
+/*--------------------styles feedback form alignment---------------*/
+
+
+ #block-feedback-form {
+  display: none;
+ 
+ 
+ left: 0px !important;
+  overflow: hidden;
+  z-index: 10;
+ 
+}
+ #block-feedback-form h2{
+    left: 0 !important;
+    position: fixed !important;
+    top: 25% !important;
+  background: url(images/feedback_hover.png) no-repeat scroll 0px 0px !important;
+  width:39px;
+  height:118px;
+  cursor: pointer;
+}
+ #block-feedback-form h2:hover{
+ 
+  background: url(images/feedback.png) no-repeat scroll 0px 0px !important;
+}
+
+ #block-feedback-form .content{
+  position: fixed !important;
+  top:10% !important;
+  left:33% !important;
+  width:440px; 
+ 
+}
+
+ #block-feedback-form form{
+ border:5px solid #ccc !important;
+ border-radius: 8px;
+ -webkit-border-radius: 8px;
+ -moz-border-radius: 8px;
+ padding: 0px;
+ max-width:440px !important; 
+ background: url(images/feed-bg.png) repeat left center;
+ font-family: Arial;
+ font-size: 13px;
+} 
+ #block-feedback-form label  {
+  font-weight: normal!important; 
+  color:#1a253c;
+}
+ #block-feedback-form label.option{
+  color:#555;
+}
+ #block-feedback-form #fb_close{
+  background: url(images/head-split.png) repeat left center ;
+    color: #FFFFFF;
+    padding: 11px 15px 11px 5px;
+    text-align: right;
+    text-decoration: none;
+   /* position: relative; */
+    margin: 2px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    -moz-border-top-left-radius: 5px;
+    -moz-border-top-right-radius: 5px;
+    -webkit-border-top-left-radius: 5px;
+    -webkit-border-top-right-radius: 5px;
+    
+    width : 406px;
+    height : 21px;
+    
+    }
+
+ #block-feedback-form #fb_close a:hover
+{
+    color:#fff;
+}
+ #block-feedback-form .messages
+{
+  margin: 0px;
+}
+ #block-feedback-form .feedback-help,  #block-feedback-form .form-item-message, #block-feedback-form .form-wrapper
+{
+  margin:4px 8px 0 8px;
+}
+
+
+ #feedback-form div.messages{
+    top:0px;
+}
+
+ #block-feedback-form .feedback-link {
+    float: left;
+    font-size: 0;
+    height: 108px;
+    opacity: 0;
+    text-align: right;
+    width: 36px;
+    padding:12px;
+}
+
+/* 28:02:12 */
+ #feedback-form .form-checkboxes,  #feedback-form .form-radios,  #feedback-form .form-checkboxes .form-item,  #feedback-form .form-radios .form-item {
+   float: left;
+   height:33px;
+}
+ #feedback-form .form-checkboxes .form-item,#feedback-form .form-radios .form-item {
+  width: 85px;
+}
+ #feedback-form input.form-checkbox,  #feedback-form input.form-radio {
+  vertical-align: -3px;
+  
+}
+/* 29:02:12 */
+
+ #block-feedback-form form {
+  opacity:1!important;
+  
+}
+
+ #feedback-submit {
+  background: url(images/send_feed.png) no-repeat scroll left center;
+  width:130px;
+  /* height:35px; */
+  border:none;
+  color:#000;
+  float: right;
+  padding:12px 0 10px; 
+  font-family: Arial;
+  margin:10px 0 5px 0;
+  cursor: pointer;
+  font-weight:bold;
+}
+
+ #block-feedback-form .feedback-help {
+  float:left;
+  padding-bottom:10px;
+  font-size: 12px;
+}
+ #feedback-form .resizable-textarea {
+  padding-top:5px;
+}
+
+
+ #feedback-form #feedback_title {
+   font-family: Arial;
+   font-size: 16px;
+   font-weight: bold;
+   color: #fff;
+   float: left;
+   padding-left: 15px;
+}
+ #feedback-form .form-item-field-email-und-0-value label {
+   float: left;  
+   width: 100%;
+
+}
+ #feedback-form #fb_close_link {
+  background: url(images/close.png) no-repeat left center;
+  padding: 12px;
+}
+ #feedback-form #edit-field-email-und-0-value {
+  border:1px solid #DEE4E7;
+  border-radius: 3px;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+    color: #1A253C;
+    padding:2px;
+    width: 275px;
+    height: 32px;
+}
+ #feedback-form .form-textarea-wrapper textarea {
+  border: 1px solid #ccc!important;
+}
+
+
+
+/*Added for feedback form*/
+  #overlay #overlay-titlebar,
+  #overlay #overlay-content div.header,
+  #overlay #overlay-content div.title,
+  #overlay #overlay-content div.gray-bdr,
+ #overlay #overlay-content div.footer,
+  #overlay #overlay-content div#tabs-wrapper{
+	display:none;
+}
+  #overlay #overlay-content div.right-corner div.region-content {
+	display: block;
+}
+  #overlay #overlay-content
+{
+    background:none;
+}
+ div#block-feedback-form a.feedback-link-new{
+    left: 0;
+    padding: 40px 8px;
+    position: absolute;
+    /*top: 5px;*/
+    opacity: 0;
+    width:23px;
+    height:38px;
+}
+
+ #overlay-content #block-feedback-form .feedback-message {
+	height: 100%;
+}
+
+
+
+ #overlay-content #branding {
+  display:none !important;
+}
+
+ #block-feedback-form form #edit-url-hidden{
+  display:none;
+}
+
+ #block-feedback-form #fb_close a:hover {
+  color : none ;
+  text-decoration: none;
+}
+
+ #block-feedback-form input.form-submit, a.button{
+  border:0 none!important;
+  border-radius: 0px!important;
+}
+
+body.page-feedback #page {
+  background: none !important;
+}

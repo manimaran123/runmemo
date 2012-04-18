@@ -1,0 +1,57 @@
+The Server is ready for use. Please find the details below.
+
+Apache Access
+
+http://46.137.60.65/test.php
+
+http://ec2-46-137-60-65.eu-west-1.compute.amazonaws.com
+
+ 
+
+Mysql Access
+
+ 
+
+Hostname   :-46.137.60.65
+
+User Name :- root
+
+Password    :- Discovery123
+
+ 
+
+WinSCP Access for File Transfer
+
+ 
+
+Hostname :-     root@ec2-46-137-60-65.eu-west-1.compute.amazonaws.com
+
+Key Pair     :- runmemoprivate.ppk
+
+ 
+
+Windows SSH Access
+
+Host name :- root@ ec2-46-137-60-65.eu-west-1.compute.amazonaws.com
+
+Key Pair      :- runmemoprivate.ppk
+
+
+Github Account. For setting up keygeneration and put into our runmemo repository
+-----------------------------------------------------------------------------------------
+username:yogaraj
+password:yogaraj123
+email:yogaraj.l@sybrant.com
+
+use GitBash to connect to project
+----------------------------------------------------------------------------------
+git clone ssh://git@runmemo.repositoryhosting.com/runmemo/runmemo.git
+
+git add filename   (adding files to svn)
+git pull filename  (update svn)
+git commit filename
+
+esc:wq to save file in cmd prompt
+
+
+

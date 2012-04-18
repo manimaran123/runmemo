@@ -1,0 +1,6 @@
+name = generate_thumbnails
+description = A module that is used to generate thumbnail and preview images
+core = 7.x
+
+files[] = generate_thumbnails.inc
+

@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * @file
+ * Install and uninstall functions for the ocr module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function ocr_schema() {
+  $schema['ocr_response'] = array(
+    'description' => 'Stores response from OCR passed through amazon sqs .',
+    'fields' => array(
+      'ocr_responseid' => array(
+        'type' => 'int',
+       
+        'not null' => TRUE,
+        
+        'description' => "The unique id for response.",
+      ),
+	  'nid' => array(
+        'type' => 'int',
+       
+        'not null' => TRUE,
+       
+        'description' => "The unique id for response.",
+      ),
+      'ocr_messageid' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+       
+        'description' => 'The messageid of the message.',
+       ),
+      'ocr_response' => array(
+        'type' => 'text',
+       'not null' => TRUE,       
+       'description' => 'The response from OCR.',
+       ),
+    
+	'ocr_status' => array(
+        'type' => 'int',
+        
+        'not null' => TRUE,
+        
+        'description' => "The status of the response.",
+      ),
+	  'received' => array(
+         'type' => 'int',
+        'not null' => TRUE,
+        
+        'description' => 'The timestamp of the response.',
+      ),
+    
+    'primary key' => 'ocr_responseid',
+    )
+  );
+return $schema;
+ }

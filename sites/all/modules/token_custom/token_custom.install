@@ -1,0 +1,63 @@
+<?php
+
+//$Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the token_custom module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function token_custom_install() {
+  drupal_set_message(st('The Token Custom module was installed. You can manage your custom tokens in the <a href=\'@admin_url\'>admin pages</a>.',
+                        array('@admin_url' => url('admin/structure/token-custom'))));
+}
+
+
+/**
+ * Implementation of hook_schema().
+ */
+function token_custom_schema() {
+  $schema = array();
+
+  $schema['token_custom'] = array(
+    'description'   => 'The database table for the Token Custom module.',
+    'fields'        => array(
+      'machine_name'  => array(
+        'description' => 'The token\'s machine name',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+      ),
+      'name'        => array(
+        'description' => 'The token\'s human readable name',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+      ),
+      'description' => array(
+        'description' => 'The token\'s description, as shown on the token listings',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+      ),
+      'type'        => array(
+        'description' => 'The token\'s type, defining the context in which it will be available',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+      ),
+      'php_content' => array(
+        'description' => 'The token\'s php content',
+        'type'        => 'text',
+        'size'        => 'big',
+        'not null'    => TRUE,
+      ),
+    ),
+    'primary key'   => array('machine_name'),
+  );
+
+  return $schema;
+}

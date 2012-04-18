@@ -1,0 +1,381 @@
+ <?php 
+/**
+ * Init function for adding the external file
+ */
+
+function photo_upload_init() {
+    //to add the js file
+    drupal_add_js(drupal_get_path("module", "photo_upload") . "/js/photo_upload.js");
+    drupal_add_css(drupal_get_path('module', 'photo_upload') . '/photo_upload.css');
+    drupal_add_css(drupal_get_path('theme', 'runmemo') . '/css/style.css');
+}
+
+/** 
+ * Create the hook menu for each page 
+ * by using this we can map to the related page
+ * @return 
+ * return the custom created menus
+ */
+function photo_upload_menu() {
+  //url for photographer
+  $items['photographer'] = array(
+                      'title' => 'Upload Photos',
+                      'description' => 'View the objects in a bucket on your Amazon S3 account.',
+                      'page callback' => 'photographer_upload_photos',
+                      'access arguments' => array('access_photographer'),
+                      'type' => MENU_CALLBACK,
+                      );
+  $items['admin/photographer/share'] = array(
+      'title' => 'Managing share for Photographers',
+      'description' => 'Managing share for Photographers ',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('photograher_share'),
+      'access arguments' => array('administer store'),
+
+      );
+
+  return $items;
+
+}
+
+/**
+ * Set the pemission for each url in the admin side
+ * so we can the restrict the particular page to accessed by the anonymouse user
+ * @return 
+ * Return the access permission
+*/
+function photo_upload_permission() {
+
+    return array(
+                        'access_photographer' => array(
+                        'title' => t('Access photographer'),
+                        'description' => t('Access photographer'),
+                        'restrict access' => TRUE,
+                        ),
+                 );
+}
+
+/** 
+ * Photographer page
+ * where the photographer can upload the photos by selecting the event
+ * uploaded photos are stored in the amazon_s3
+*/
+function select_event_function() {
+    
+    $form = array();
+
+    $form['event_title'] = array('#markup' => '<div class="select_event_title" >Select Event</div>');
+
+    $form['events_select'] = array('#type' => 'select', '#title' => '', '#id' => 'event_select', '#attributes' => array('onchange' => 'return select_event_upload();'), '#prefix' => '<div id="event_drop">', '#suffix' => '</div>');
+
+    $form['events_select']['#options'] = array('select_event' => "Select Event");
+
+
+    //select event options from content type 'event'
+    $event_helper_object = new event_helper();
+
+    //get the event name from content type 'event'
+    $event_name = $event_helper_object->get_events();
+    foreach ($event_name as $event_name_value) {
+      $event_title = $event_name_value->title;
+      $event_title_nid = $event_name_value->nid;
+      $form['events_select']['#options'][$event_title_nid] = $event_title;
+    }
+
+    if ((is_numeric(arg(1))) && (arg(1) != '')) {
+      $default = arg(1);
+      $form['events_select']['#default_value'] = $default;
+    }
+
+    return $form;
+}
+/**
+ * Drag and drop upload form creation
+ */
+function photographer_drag_and_drop_form($form, &$form_state) {
+  $form = array();
+  $form['#attributes'] = array('enctype' => 'multipart/form-data');
+
+  $form['box'] = array(
+    '#type' => 'fieldset',
+    '#title' => t(''),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['box']['file'] = array(
+    '#type' => 'plupload',
+    '#title' => t(''),
+    '#description' => t(''),
+    '#size' => 40,
+     '#prefix' => '<div class="upload_title">Upload Photos</div><span class="guide-line">Please read our ' . l("style guide", "style-guide", array(
+                    'attributes' => array(
+                      'id' => 'guide',
+                      
+                     )
+          )) . ' before uploading the photos</span>'
+  );
+
+  $form['box']['upload'] = array('#type' => 'submit', '#value' => '', '#attributes' => array('onclick' => 'return drag_drop_upload_validation();'));
+  $form['box']['selected_event'] = array('#type' => 'textfield', '#title' => '', '#id' => 'selected_event_drag');
+  return $form;
+}
+
+/** 
+ * Drag and drop submit function
+ * @param $form
+ * $form gives the form values from the photographer upload form values
+ */
+
+function photographer_drag_and_drop_form_submit($form, &$form_state) {
+
+  drupal_set_message(t("Files uploaded successfully"));
+  $form_state['redirect'] = "photographer";
+}
+
+
+/**
+ * Call back function for photographer
+ * @return 
+ * return form in the page
+ */
+function photographer_upload_photos() {
+  $select_event=drupal_render(drupal_get_form('select_event_function'));
+  $file_upload_form = drupal_render(drupal_get_form('photographer_drag_and_drop_form'));
+  $style="<div style='display:none' id='upload_section' >$file_upload_form</div>";
+  return $select_event . $style;
+}
+
+
+
+
+/**
+ * Implements photo node create().
+ * @param $file object
+ * @param $event id
+ */
+
+function create_photo_node($file, $event) {
+  global $user;
+  $uid = $user->uid;
+  $selected_event = $event;
+  $price = node_load($selected_event)->field_pricing['und']['0']['value'];
+  // We create a new node object  
+  $node = new stdClass(); 
+  // content type
+  $node->type = "product";         
+  //node title
+  $node->title = $file['name'];
+  //set language
+  $node->language = 'und'; 
+  //user id
+  $node->uid = $uid; 
+  node_object_prepare($node); 
+  // Let's add standard body field
+  $node->body[$node->language][0]['value'] = 'This is a body text';
+  $node->body[$node->language][0]['summary'] = 'Here goes a summary';
+  $node->body[$node->language][0]['format'] = 'filtered_html'; 
+  //////////Change file extension////////////////////////
+  $file_path = drupal_realpath('temporary://');
+  $temp_name = $file['tmpname'];
+  $temp_path = $file_path . '/' . $temp_name;
+  chmod($temp_path, '777');
+  $original_name = $file_path . '/' . $file['name'];
+  rename($temp_path, $original_name);
+  $file_obj = (object) array(
+          'uid' => $uid,
+          'uri' => $original_name,
+          'filemime' => file_get_mimetype($original_name),
+          'status' => 1,
+          'filename' => $file['name'],
+
+  );
+  //file moves from temp to public folder
+  $file_obj = file_move($file_obj, 'public://', FILE_EXISTS_RENAME); 
+  $node->uc_product_image['und'][0] = (array)$file_obj; //associate the file object with the image field:
+
+    if (($selected_event == '')) {
+      $node->field_event_reference['und']['0']['nid'] = arg(1);
+  }
+  else{
+      $node->field_event_reference['und']['0']['nid'] = $selected_event;
+  }
+  if ($price != '') {
+    $node->sell_price = $price; 
+  }                 
+  $node = node_submit($node); // Prepare node for a submit
+
+  node_save($node); // After this call we'll get a nid
+
+  return $node;
+        
+}
+
+/**
+ * Menu alter function for plupload_handle_uploads
+ * @param $items
+ */
+
+function photo_upload_menu_alter(&$items) {
+  // Example - disable the page at node/add
+  //$items['node/add']['access callback'] = FALSE;
+  if ($items['plupload-handle-uploads']) {
+    $items['plupload-handle-uploads']['page callback'] = 'custom_plupload_handle_uploads';
+  }
+}
+
+/**
+ * Implemention custom_plupload_handle_uploads().
+ * 
+ */
+function custom_plupload_handle_uploads() {
+  // @todo: Implement file_validate_size();
+
+  // Added a variable for this because in HA environments, temporary may need
+  // to be a shared location for this to work.
+  $temp_directory = variable_get('plupload_temporary_uri', 'temporary://');
+  $writable = file_prepare_directory($temp_directory, FILE_CREATE_DIRECTORY);
+  if (!$writable) {
+    die('{"jsonrpc" : "2.0", "error" : {"code": 104, "message": "Failed to open temporary directory."}, "id" : "id"}');
+  }
+  // Try to make sure this is private via htaccess.
+  file_create_htaccess($temp_directory, TRUE);
+
+  // Chunk it?
+  $chunk = isset($_REQUEST["chunk"]) ? $_REQUEST["chunk"] : 0;
+
+  // Get and clean the filename.
+  $file_name = isset($_REQUEST["name"]) ? $_REQUEST["name"] : '';
+  $file_name = plupload_fix_temporary_filename($file_name);
+
+  // Check the file name for security reasons; it must contain letters, numbers
+  // and underscores followed by a (single) ".tmp" extension. Since this check
+  // is more stringent than the one performed in plupload_element_value(), we
+  // do not need to run the checks performed in that function here. This is
+  // fortunate, because it would be difficult for us to get the correct list of
+  // allowed extensions to pass in to file_munge_filename() from this point in
+  // the code (outside the form API).
+  if (empty($file_name) || !preg_match('/^\w+\.tmp$/', $file_name)) {
+    die('{"jsonrpc" : "2.0", "error" : {"code": 105, "message": "Invalid temporary file name."}, "id" : "id"}');
+  }
+
+  // Look for the content type header
+  if (isset($_SERVER["HTTP_CONTENT_TYPE"])) {
+    $content_type = $_SERVER["HTTP_CONTENT_TYPE"];
+  }
+  if (isset($_SERVER["CONTENT_TYPE"])) {
+    $content_type = $_SERVER["CONTENT_TYPE"];
+  }
+
+  // Is this a multipart upload?
+  if (strpos($content_type, "multipart") !== FALSE) {
+    if (isset($_FILES['file']['tmp_name']) && is_uploaded_file($_FILES['file']['tmp_name'])) {
+      // Open temp file
+      $out = fopen($temp_directory . $file_name, $chunk == 0 ? "wb" : "ab");
+      if ($out) {
+        // Read binary input stream and append it to temp file
+        $in = fopen($_FILES['file']['tmp_name'], "rb");
+
+        if ($in) {
+          while ($buff = fread($in, 4096)) {
+            fwrite($out, $buff);
+          }
+        }
+        else {
+          die('{"jsonrpc" : "2.0", "error" : {"code": 101, "message": "Failed to open input stream."}, "id" : "id"}');
+        }
+
+        fclose($out);
+        unlink($_FILES['file']['tmp_name']);
+
+        // How many Chunks?
+        $total_chunks = isset($_REQUEST["chunks"]) ? $_REQUEST["chunks"] : 0;
+        //$chunk is 0 based count
+        if ($chunk == $total_chunks-1) {
+          $event = isset($_REQUEST["event"]) ? $_REQUEST["event"] : 0;
+          $file = array();
+          //original name
+          $file['name'] = isset($_REQUEST["name"]) ? $_REQUEST["name"] : '';
+          $file['tmpname'] = $file_name;
+          $node = create_photo_node($file, $event);
+        }
+        elseif (isset($_REQUEST["name"]) && !isset($_REQUEST["chunks"])) {
+          $event = isset($_REQUEST["event"]) ? $_REQUEST["event"] : 0;
+
+          $file = array();
+          //original name
+          $file['name'] = isset($_REQUEST["name"]) ? $_REQUEST["name"] : '';
+          $file['tmpname'] = $file_name;
+          $node = create_photo_node($file, $event);
+        }
+      }
+      else {
+        die('{"jsonrpc" : "2.0", "error" : {"code": 102, "message": "Failed to open output stream."}, "id" : "id"}');
+      }
+    }
+    else {
+      die('{"jsonrpc" : "2.0", "error" : {"code": 103, "message": "Failed to move uploaded file."}, "id" : "id"}');
+    }
+  }
+  else {
+    // Open temp file
+    $out = fopen($temp_directory . $file_name, $chunk == 0 ? "wb" : "ab");
+    if ($out) {
+      // Read binary input stream and append it to temp file
+      $in = fopen("php://input", "rb");
+
+      if ($in) {
+        while ($buff = fread($in, 4096)) {
+          fwrite($out, $buff);
+        }
+      }
+      else {
+        die('{"jsonrpc" : "2.0", "error" : {"code": 101, "message": "Failed to open input stream."}, "id" : "id"}');
+      }
+
+      fclose($out);
+    }
+    else {
+      die('{"jsonrpc" : "2.0", "error" : {"code": 102, "message": "Failed to open output stream."}, "id" : "id"}');
+    }
+  }
+
+  // Return JSON-RPC response
+  die('{"jsonrpc" : "2.0", "result" : null, "id" : "id"}');
+}
+
+/**
+* For Managing share of price for photographers
+*/
+function photograher_share() {
+$form['share']  = array('#type' => 'textfield', '#title' => 'Runmemo Share', '#size' => '20', '#required' => 'true', '#default_value' => variable_get('photographer_share'), '#prefix' => '<div class="pshare">', '#suffix' => '<span class="sharePer"></span></div>', '#description' => 'Share of runmemo', );
+
+$form['submit']  = array('#type' => 'submit', '#title' => 'Submit', '#value' => 'Submit');
+return $form;
+}
+
+/**
+* Form validation for numeric values photograher_share()
+*/
+function photograher_share_validate($form, &$form_state) {
+
+  $share = $form_state['values']['share'];
+
+  if (!is_numeric($share) || $share < 0 || $share > 100) {
+
+    form_set_error('share', t('Enter a Numeric Value'));
+  }
+}
+
+/**
+* Form submission photograher_share()
+*/
+function photograher_share_submit($form, &$form_state) {
+  drupal_set_message(t('Photographer Share set'));
+  $share = $form_state['values']['share'];
+  variable_set('photographer_share', $share);
+}
+
+
+
+

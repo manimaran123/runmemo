@@ -1,0 +1,19 @@
+/*  Runmemo IE8  */
+
+#runner_number, #number_recent_event1, #number_recent_event2 {
+  *padding:4px 0 0 0;	
+  *height:30px;
+}
+/*@media \0screen {
+  #runner_number, #number_recent_event1, #number_recent_event2 { padding:4px 0 0 0; height:30px; }
+}*/
+
+#runner_number {
+ *padding:12px;	
+  }
+/*#runner_number {
+  padding:4px 0 0 0\o/;	
+  height:30px\o/;	
+}*/
+
+body { display:none;}

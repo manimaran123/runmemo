@@ -1,0 +1,12 @@
+name = Amazon S3
+description = Provides an API for Amazon's Simple Storage Service
+core = 7.x
+files[] = amazon_s3.module
+files[] = amazon_s3.css
+
+; Information added by drupal.org packaging script on 2011-04-29
+version = "7.x-1.0-alpha1"
+core = "7.x"
+project = "amazon_s3"
+datestamp = "1304044014"
+

@@ -1,0 +1,5 @@
+name = ubercart_custom
+description = A block module that is used to alter the ubercart core module
+core = 7.x
+
+files[] = ubercart_custom.inc

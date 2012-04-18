@@ -1,0 +1,306 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * It gives the user the ability to create custom tokens using PHP code
+ * for specific replacements that can improve other modules relying
+ * on the token Drupal 7 core API.
+ */
+
+
+/**
+ * Implementation of hook_help().
+ */
+function token_custom_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#token_custom':
+      $output = '<p>'
+              . t('This allows you to create custom tokens for use throughtout the site using the <a href=\'@admin_url\'>administration pages</a>', array('@admin_url' => url('admin/structure/token-custom')))
+              . '</p>';
+      $output .= '<p>'
+              . t('Tokens can be created using markup or PHP and have access to context related objects.')
+              . '</p>';
+      return $output;
+  }
+}
+
+
+/**
+ * Implementation of hook_permission().
+ */
+function token_custom_permission() {
+  return array(
+    'administer custom tokens' => array(
+      'title' => t('Manage custom tokens using PHP.'),
+      'description' => t('Create/edit/delete custom tokens using markup or PHP.'),
+    ),
+    'list custom tokens' => array(
+      'title' => t('Access the custom token\'s administration page.'),
+      'description' => t('Create/edit/delete custom tokens using markup or PHP.'),
+    ),
+  );
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function token_custom_menu() {
+  $items['admin/structure/token-custom'] = array(
+    'title'      => 'Custom tokens',
+    'description'    => 'Administrate custom tokens.',
+    'page callback'  => 'token_custom_list_page',
+    'access arguments' => array('list custom tokens'),
+    'file'       => 'token_custom.admin.inc',
+  );
+
+  $items['admin/structure/token-custom/list'] = array(
+    'title'          => 'List',
+    'description'    => 'List of custom tokens.',
+    'type'           => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items['admin/structure/token-custom/add'] = array(
+    'title'      => 'Add token',
+    'description'    => 'Create custom tokens',
+    'page callback'  => 'drupal_get_form',
+    'page arguments' => array('token_custom_edit_form', 'add'),
+    'access arguments' => array('administer custom tokens'),
+    'file'           => 'token_custom.admin.inc',
+    'weight'         => 1,
+    'type'           => MENU_LOCAL_ACTION,
+  );
+
+  $items['admin/structure/token-custom/%token_custom/edit'] = array(
+    'title'          => 'Edit token',
+    'page callback'  => 'drupal_get_form',
+    'page arguments' => array('token_custom_edit_form', 'edit', 3),
+    'access arguments' => array('administer custom tokens'),
+    'file'           => 'token_custom.admin.inc',
+    'type'           => MENU_CALLBACK,
+    'weight'         => 10,
+  );
+
+  $items['admin/structure/token-custom/%token_custom/delete'] = array(
+    'title' => 'Delete custom token',
+    'page callback'   => 'drupal_get_form',
+    'page arguments'  => array('token_custom_delete_confirm_form', 3),
+    'access arguments' => array('administer custom tokens'),
+    'file'            => 'token_custom.admin.inc',
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_token_info().
+ */
+function token_custom_token_info() {
+
+  $tokens = array();
+  $data = token_custom_load_multiple();
+
+  foreach ($data as $token) {
+  //Add our 'custom' token type if necessary
+    if ($token->type == 'custom' && !isset($tokens['types']['custom'])) {
+      $tokens['types']['custom'] = array(
+      'name' => t('Custom tokens'),
+      'description' => t('Customized tokens for the custom token module'),
+      );
+    }
+
+    $tokens['tokens'][$token->type][$token->machine_name] = array(
+      'name'         => $token->name,
+      'description'  => $token->description,
+    );
+  }
+
+  return $tokens;
+}
+
+
+/**
+ * Implements hook_tokens().
+ */
+function token_custom_tokens($type, $tokens, array $data = array(), array $options = array()) {
+
+  $return = array();
+
+  //Load all our custom modules mentionned in the $tokens array
+  $custom_tokens = token_custom_load_multiple(array_keys($tokens));
+
+  foreach($custom_tokens as $machine_name => $custom_token) {
+    if (($type == $custom_token->type)
+        && array_key_exists($machine_name, $tokens)) {
+      $return[$tokens[$machine_name]] = token_custom_eval($custom_token->php_content, $data, $options);
+    }
+  }
+
+  return $return;
+}
+
+
+/*
+ * CRUD routines
+ */
+
+/**
+ * Saves a token to the database.
+ *
+ * @param $token
+ *  An object or an array containing the values to save.
+ *  The key 'is_new' determines if the token is being inserted or updated
+ * @return bool
+ */
+function token_custom_save($token) {
+  $is_new = is_object($token) ? (bool) $token->is_new : !empty($token['is_new']);
+
+  $return = (bool) drupal_write_record('token_custom', $token, $is_new ? array() : 'machine_name');
+
+  //Clear the Token module's token cache table.
+  if (module_exists('token')) {
+    token_clear_cache();
+  }
+
+  return $return;
+}
+
+
+/**
+ * Loads an individual token from the database.
+ *
+ * Calls on the main loading function that maintains a static cache of
+ * the loaded tokens.
+ *
+ * @param $machine_name
+ * @return object|NULL
+ *  *  The token object or null
+ */
+function token_custom_load($machine_name = NULL) {
+
+  if (empty($machine_name) || !is_string($machine_name)) {
+  return NULL;
+  }
+
+  $tokens = token_custom_load_multiple(array($machine_name));
+  return array_shift($tokens);
+}
+
+
+/**
+ * Loads an array of tokens from the database.
+ *
+ * Maintains a static cache with the tokens already loaded to
+ * avoid unnecessary queries.
+ *
+ * @param $names
+ *  An array containing the machine names of the tokens to return.
+ *  If none, then loads and returns all the tokens.
+ * @return array
+ *  An array of token objects, keyed by the token's machine name.
+ */
+function token_custom_load_multiple($names = NULL) {
+
+  static $tokens = array();
+  static $all_loaded = FALSE;
+
+  if ($names === NULL) {
+    if (!$all_loaded) {
+      $loaded = array_keys($tokens);
+      $query = db_select('token_custom')->fields('token_custom');
+      if (!empty($loaded)) {
+        $query->condition('machine_name', $loaded, 'NOT IN');
+      }
+      $results = $query->execute();
+      $all_loaded = TRUE;
+      foreach ($results as $token) {
+        $tokens[$token->machine_name] = $token;
+      }
+    }
+
+    return $tokens;
+  }
+
+  $to_fetch = array();
+  foreach ($names as $name) {
+    if (!array_key_exists($name, $tokens)) {
+      $to_fetch[] = $name;
+    }
+  }
+
+  if (!empty($to_fetch)) {
+    $query = db_select('token_custom')
+               ->fields('token_custom')
+               ->condition('machine_name', $to_fetch, 'IN');
+    $results = $query->execute();
+
+    foreach ($results as $token) {
+      $tokens[$token->machine_name] = $token;
+    }
+  }
+
+  $return = array();
+  foreach ($names as $name) {
+    if (isset($tokens[$name])) {
+      $return[$name] = $tokens[$name];
+    }
+  }
+
+  return $return;
+}
+
+
+/**
+ * Delete an individual token from the database.
+ *
+ * @param $machine_name
+ */
+function token_custom_delete($machine_name) {
+
+  if (!is_string($machine_name) || empty($machine_name)) {
+    return FALSE;
+  }
+
+  $return = db_delete('token_custom')
+              ->condition('machine_name', $machine_name)
+              ->execute();
+
+  //Clear the Token module's token cache table.
+  if (module_exists('token')) {
+    token_clear_cache();
+  }
+
+  return $return;
+}
+
+
+/**
+ * Evaluate a string of PHP code. (Copy from drupal_eval())
+ *
+ * This is a wrapper around PHP's eval(). It uses output buffering to capture both
+ * returned and printed text.
+ *
+ * Using this wrapper also ensures that the PHP code which is evaluated can not
+ * overwrite any variables in the calling code except the ones we need.
+ *
+ * @param string $code
+ *   A string containing the code to evaluate.
+ * @param $data
+ *   The $data array passed on to token_replace().
+ * @param $options
+ *   The $options array passed on to token_replace().
+ * @return
+ *   A string containing the printed output of the code, followed by the returned
+ *   output of the code.
+ */
+function token_custom_eval($code, $data, $options) {
+  ob_start();
+  print eval($code);
+  $output = ob_get_contents();
+  ob_end_clean();
+  return $output;
+}
+
+

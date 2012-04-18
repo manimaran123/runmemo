@@ -1,0 +1,15 @@
+name = Roles
+description = Assigns permanent or expirable roles based on product purchases.
+dependencies[] = uc_product
+dependencies[] = uc_order
+package = Ubercart - core (optional)
+core = 7.x
+
+stylesheets[all][] = uc_roles.css
+
+; Information added by drupal.org packaging script on 2012-01-23
+version = "7.x-3.0-rc4"
+core = "7.x"
+project = "ubercart"
+datestamp = "1327337150"
+

@@ -1,0 +1,111 @@
+<?php
+
+/**  
+ * Create the hook menu for each page 
+ * by using this we can map to the related page
+ * @return
+ * return menu items
+ */
+function feedback_custom_menu() {
+  
+  $items['feedback'] = array(
+    'title' => 'Feedback',
+    'description' => 'Feedback form.',
+    'page callback' => 'custom_feedback_form',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK
+  );
+
+    return $items;
+}
+
+/**
+ * Form alter function
+ * by using this form_alter function we can alter the form without editing core module
+ * @param $form,$form_state,$form_id
+ * $form give the form value
+ * $form_id is the form id
+ */
+function feedback_custom_form_alter(&$form, $form_state, $form_id) {
+  //alter the feedback form
+  if ($form['#form_id'] == 'feedback_form') {
+    drupal_add_css(drupal_get_path('module', 'feedback_custom') . '/feedback_custom.css');
+    $form['close'] = array('#markup' => '<div id="fb_close"><span id="feedback_title">Feedback</span><a id="fb_close_link" style="cursor:pointer">&nbsp;</a></div>', '#weight' => '-5');
+    $form['help']['#weight'] = '-1'; 
+    $form['url_hidden'] = array('#type' => 'textfield', '#default_value' => '');
+    $form['#validate'][] = 'feedback_form_validate';
+    $form['#submit'] = array('custom_feedback_submit'); 
+
+  }
+   
+}
+
+
+
+/**
+ * Form validation
+ * @param type $form
+ * @param type $form_state 
+ */
+function feedback_form_validate($form, &$form_state) {
+  
+  $email = $form['field_email']['und']['0']['value']['#value'];
+
+  if (!(preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/", $email)) && ($email != '')) {
+   
+    form_set_error('field_email', t('Invalid Email Address'));
+    
+  }
+      
+}
+
+/**
+ * Custom feedback form.
+ *
+ * For setting up the overlay.
+ */
+function custom_feedback_form() {
+ 
+  return '<div id="block-feedback-form"><div class="content">' . drupal_render(drupal_get_form('feedback_form')) . '</div></div>';
+
+}
+/**
+ * Implements hook_admin_paths().
+ */
+function feedback_custom_admin_paths_alter(&$paths) {
+  $paths['feedback'] = TRUE;
+  $paths['feedback/*'] = TRUE;
+  $paths['node/*'] = FALSE;
+  $paths['node/add'] = FALSE;
+  $paths['node/add/*'] = FALSE;
+  $paths['user'] = FALSE;
+  $paths['user/*/edit'] = FALSE;
+}
+
+
+/**
+ * Form validation
+ * @param type $form
+ * @param type $form_state 
+ */
+function custom_feedback_submit($form, &$form_state) {
+  global $user;
+  $values = $form_state['values'];
+  $links = explode("#", $values['url_hidden']);
+  
+  $entry = new stdClass();
+  entity_form_submit_build_entity('feedback', $entry, $form, $form_state);
+  $entry->message = $form_state['values']['message'];
+  $entry->location = $links[0];
+  feedback_save($entry);
+  $entry->location_masked  = $links[0];
+  $entry->url = $links[0];
+  
+  feedback_save($entry);
+  drupal_set_message(t('Thanks for your feedback!'));
+  
+}
+
+
+
+

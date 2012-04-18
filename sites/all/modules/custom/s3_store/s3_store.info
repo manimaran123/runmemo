@@ -1,0 +1,5 @@
+name = s3_store
+description = A module that is used to push files to s3 via cron job
+core = 7.x
+
+files[] = s3_store.inc

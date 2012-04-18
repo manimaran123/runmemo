@@ -1,0 +1,321 @@
+<?php
+/**
+ * Init function for adding the external file
+ */
+
+function photo_search_init() {
+  
+  //$cart_contents;
+  
+  //to add the js file
+  drupal_add_js(drupal_get_path("module", "photo_search") . "/photo_search.js");
+  drupal_add_css(drupal_get_path('module', 'photo_search') . '/photo_search.css');
+}
+
+///////////////////////////////////////////////////////////
+/**  
+ * Create the hook menu for each page 
+ * by using this we can map to the related page
+ * @return
+ * return menu items
+ */
+function photo_search_menu() {
+    //url for runner
+  $items['runner'] = array(
+    'title' => 'Photo Gallery',
+    'description' => 'View the objects in a event on your Amazon S3 account.',
+    'page callback' => 'find_trade_section',
+    'access arguments' => array('access_runner'),
+    'type' => MENU_CALLBACK
+  );
+  
+
+    return $items;
+
+}
+
+
+/**
+ * Set the pemission for each url in the admin side
+ * so we can the restrict the particular page to accessed by the anonymouse user
+*/
+function photo_search_permission() {
+
+  return array(
+      'access_runner' => array(
+      'title' => t('Access runner'),
+      'description' => t('Access runner'),
+      'restrict access' => TRUE
+    ),
+
+  );
+}
+
+
+/**
+ * Created the form for runner page
+ * runner can search the photos by selecting the event name
+ */
+
+function select_event_runner_get_photos($form, &$form_state) {
+  
+  global $user;
+  $form = array();
+  $form['setfield']=array(
+      '#type' => 'fieldset',
+      '#title' => '',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#attached' => array('css' => array(drupal_get_path('module', 'photo_search') . '/photo_search.css')),
+
+      );
+
+  //select event in the runner side
+  
+  if (arg('0') == 'search-result') {
+    $form['setfield']['event_label'] = array('#markup' => "<div  id='event-search'>Event</div>");
+    $form['setfield']['events_select_runner'] = array('#type' => 'select', '#title' => "Event", '#id' => 'event_runner', '#required' => 'true');
+  }
+  else{
+    $form['setfield']['find'] = array('#markup' => "<div  id='find'>Find</div> <div id='great_photos'>great photos of you...</div>");
+    $form['setfield']['events_select_runner'] = array('#type' => 'select', '#title' => "Event", '#id' => 'event_runner', );
+    
+  }
+  $form['setfield']['events_select_runner']['#options'] = array('select_event' => "Select Event");
+  //select event options from content type 'event'
+  $event_helper = new event_helper();
+  //get the event name from content type 'event'
+  $event_name = $event_helper->get_events();
+  foreach ($event_name as $event_name_value) {
+    $event_title = $event_name_value->title;
+    $event_title_nid = $event_name_value->nid;
+    $form['setfield']['events_select_runner']['#options'][$event_title_nid]=$event_title;
+  }
+
+  if ((is_numeric(arg(1))) && (arg(1) != '')) {
+    $default=arg(1);
+    $form['setfield']['events_select_runner']['#default_value']=$default;
+  }
+
+  //text field for get the runner number
+  if (arg('0') == 'search-result') {
+    $form['setfield']['my_number'] = array('#markup' => '<div id="my_number">My Number</div>');
+    $form['setfield']['runner_number'] = array('#type' => 'textfield', '#title' => 'Runner Number', '#size' => '20', '#id' => 'runner_number', '#placeholder' => t('My Number'), '#prefix' => "<div style='float:right' class= 'number_search'>", '#required' => 'true');
+    if (arg('2') != '') {
+      $form['setfield']['runner_number']['#default_value'] = arg('2');
+    }
+
+  }
+  else {
+    $form['setfield']['runner_number'] = array('#type' => 'textfield', '#title' => 'Runner Number', '#size' => '20', '#id' => 'runner_number', '#prefix' => "<div style='float:left'>", '#required' => 'true', );
+  }
+
+  //submit get my photo in the runner side
+  $form['setfield']['search'] = array('#type' => 'submit', '#value' => '', '#prefix' => "<div style='float:right;margin-left:15px;display:none'></div>", '#suffix' => '</div>');
+
+  return $form;
+
+}
+
+function select_event_runner_get_photos_validate($form, &$form_state) {
+ $event_selected = $form['setfield']['events_select_runner']['#value'];
+ if ($event_selected == 'select_event') {
+   form_set_error('', t('Please select event'));
+ }
+ 
+ $runner_num = $form['setfield']['runner_number']['#value'];
+ if ($runner_num == 'My Number') {
+   form_set_error('', t('Please enter your number'));
+ }
+ 
+}
+
+/** 
+ * Function for runner photo search submit.
+ */
+function select_event_runner_get_photos_submit($form, &$form_state) {
+
+  $event_id = $form['setfield']['events_select_runner']['#value'];
+  $runner_number = $form['setfield']['runner_number']['#value'];
+  
+  if (!empty($runner_number)) {
+    $form_state['redirect'] = "search-result/" . $event_id . "/" . $runner_number;
+  }
+  else {
+    $form_state['redirect'] = "search-result/" . $event_id;
+  }
+
+}
+
+/** 
+ * Function for buy the images
+ * @return 
+ *   return form values
+ */
+function select_event_runner_sell_photos($form, &$form_state) {
+    
+  global $user;
+  //for sell the photos in the runner side
+  $form['sellfield'] = array(
+      '#type' => 'fieldset',
+      '#title' => '',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#attached' => array('css' => array(drupal_get_path('module', 'amazon_s3') . '/amazon_s3.css')),
+
+      );
+
+  $form['sellfield']['trade'] = array('#markup' => '<div id="trade">Trade</div>  <div id="taken_picture">pictures you have taken...</div>');
+
+  if (isset($user->roles['1'])) {
+    $form['sellfield']['get_started'] = array('#type' => 'submit', '#value' => '');
+  }
+  else {
+    $form['sellfield']['events_select_runner'] = array('#type' => 'select', '#title' => '', '#id' => 'event_runner_sell');
+
+    $form['sellfield']['events_select_runner']['#options'] = array('select_event' => "Select Event");
+    //select event options from content type 'event'
+    $event_helper = new event_helper();
+    //get the event name from content type 'event'
+    $event_name = $event_helper->get_events();
+    foreach ($event_name as $event_name_value) {
+      $event_title = $event_name_value->title;
+      $event_title_nid = $event_name_value->nid;
+      $form['sellfield']['events_select_runner']['#options'][$event_title_nid] = $event_title;
+    }
+    $form['sellfield']['get_started'] = array('#type' => 'submit', '#value' => '');
+  }
+
+
+  return $form;
+}
+
+/**
+ * Function for get started submit button in the home
+ *  
+ */
+
+function select_event_runner_sell_photos_submit($form, &$form_state) {
+
+  global $user;
+  $uid = $user->uid;
+ 
+  
+  if (isset($user->roles['1'])) {
+    $form_state['redirect'] = "login";
+  }
+  else {
+    $selected_event_id = $form['sellfield']['events_select_runner']['#value'];  
+    if ($selected_event_id != 'select_event') {
+      $form_state['redirect'] = "photographer/" . $selected_event_id;
+    }
+    else {
+      $form_state['redirect'] = "photographer";
+    }
+  }    
+}
+
+/**
+ * Function for search the images by runner
+ * @return 
+ *   return rendered drupal form
+ */
+function find_trade_section() {
+    
+  $find_photos = drupal_render(drupal_get_form('select_event_runner_get_photos'));
+
+  $trade_photos = drupal_render(drupal_get_form('select_event_runner_sell_photos'));
+
+  $style = "<span style='float:right'><div>$find_photos</div><div>$trade_photos </div></span>";
+
+  return $style;
+}
+
+/**
+ * For search the photo using runner number in the recent event section
+ * @return string 
+ */
+function recent_event1_image() {
+  
+  $form = array();
+  
+  $form['runner_number'] = array('#type' => 'textfield', '#title' => 'Runner Number', '#size' => '20', '#id' => 'number_recent_event1', '#required' => 'true');
+  
+  $form['submit'] = array('#type' => 'submit', '#value' => '', );
+     
+  return  $form;
+  
+}
+
+function recent_event1_image_validate($form, &$form_state) {
+ $runner_num_event1 = $form['runner_number']['#value'];
+ if ($runner_num_event1 == 'My Number' || $runner_num_event1 == '') {
+   form_set_error('', t('Please enter your number'));
+ }
+}
+
+/**
+ * For testing purpose
+ * @param type $form
+ * @param type $form_state 
+ */
+function recent_event1_image_submit($form, &$form_state) {
+  $event_helper = new event_helper();
+  $recent_event1 = $event_helper->get_recent_event_id(0, 1);
+  $runner_number = $form['runner_number']['#value'];
+  $path = 'search-result/' . $recent_event1 . '/' . $runner_number;
+  drupal_goto($path);
+}
+
+/**
+ * For search the photo using runner number in the recent event section
+ * @return string 
+ */
+function recent_event2_image() {
+  
+  $form = array();
+  
+  $form['runner_number_event2'] = array('#type' => 'textfield', '#title' => 'Runner Number', '#size' => '20', '#id' => 'number_recent_event2', '#required' => 'true');
+  
+  $form['submit_event2'] = array('#type' => 'submit', '#value' => '', );
+       
+  return  $form;
+  
+}
+
+/**
+ * Form validation 
+ */
+
+function recent_event2_image_validate($form, &$form_state) {
+ $runner_num_event2 = $form['runner_number_event2']['#value'];
+ if ($runner_num_event2 == 'My Number' || $runner_num_event2 == '') {
+   form_set_error('', t('Please enter your number'));
+ }
+}
+/**
+ * For testing purpose
+ * @param type $form
+ * @param type $form_state 
+ */
+
+function recent_event2_image_submit($form, &$form_state) {
+  $event_helper = new event_helper();
+  $recent_event2 = $event_helper->get_recent_event_id(1, 1);
+  $runner_number = $form['runner_number_event2']['#value'];
+  $path = 'search-result/' . $recent_event2 . '/' . $runner_number;
+  drupal_goto($path);
+}
+
+
+/**
+ * Cron form alter
+ */
+function photo_search_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'system_cron_settings') {
+    $form['cron']['cron_safe_threshold']['#options'] = array(0 => 'Never', '900' => '15 Mins', '1800' => '30 Mins', '3600' => '1 hour', '10800' => '3 hours', '21600' => '6 hours', '43200' => '12 hours', '86400' => '1 day', '604800' => '1 week');
+  }
+}
+
+ 
+

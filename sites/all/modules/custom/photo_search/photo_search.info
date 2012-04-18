@@ -1,0 +1,7 @@
+name = photo_search
+description = A block module that is used to photo_search side
+core = 7.x
+
+files[]=photo_search.test
+files[]=photo_search.inc
+files[] = event_helper.inc

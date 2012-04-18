@@ -1,0 +1,17 @@
+name = Field Validation
+description = "Add validation rules to fields."
+package = Fields
+core = 7.x
+dependencies[] = field
+dependencies[] = field_ui
+files[] = field_validation.admin.inc
+files[] = field_validation.install
+files[] = field_validation.module
+files[] = field_validation.rules.inc
+files[] = field_validation.validators.inc
+; Information added by drupal.org packaging script on 2011-10-14
+version = "7.x-1.0-beta4"
+core = "7.x"
+project = "field_validation"
+datestamp = "1318602996"
+
